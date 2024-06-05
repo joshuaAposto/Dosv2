@@ -27,7 +27,7 @@ app.get('/start-attack', (req, res) => {
     const url = req.query.url;
     let isWebsiteDown = false;
 
-    const requestsPerSecond = 1000;
+    const requestsPerSecond = 2000; // Increase the number of requests per second for higher impact
 
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
