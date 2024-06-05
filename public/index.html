@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hacker DDoS Tool</title>
+    <title>DDoS Tool</title>
     <style>
         body {
             background-color: #000;
@@ -20,9 +20,11 @@
         .container {
             width: 80%;
             max-width: 600px;
-            border: 1px solid #00FF00;
+            border: 2px solid #00FF00;
             padding: 20px;
             border-radius: 8px;
+            box-shadow: 0 0 20px #00FF00;
+            background-color: #111;
         }
         h1 {
             text-align: center;
@@ -36,17 +38,16 @@
             width: calc(100% - 22px);
             padding: 10px;
             margin: 10px 0;
-            border: 1px solid #00FF00;
-            background-color: #000;
+            border: 2px solid #00FF00;
+            background-color: #111;
             color: #00FF00;
             border-radius: 4px;
         }
         button {
             width: 100%;
             padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #00FF00;
-            background: #000;
+            border: 2px solid #00FF00;
+            background: #111;
             color: #00FF00;
             font-size: 16px;
             cursor: pointer;
@@ -54,18 +55,17 @@
         }
         button:hover {
             background: #00FF00;
-            color: #000;
+            color: #111;
         }
         pre {
             background: #000;
             color: #00FF00;
             padding: 10px;
-            border: 1px solid #00FF00;
+            border: 2px solid #00FF00;
             border-radius: 4px;
             margin-top: 10px;
             height: 200px;
             overflow-y: auto;
-            white-space: pre-wrap;
         }
     </style>
 </head>
@@ -76,56 +76,40 @@
         <p>Version 2.0 | Made by Joshua Apostol</p>
         <input type="text" id="target-url" placeholder="Enter target URL">
         <button id="start-attack">Start Attack</button>
-        <button id="stop-attack">Stop Attack</button>
         <pre id="output"></pre>
     </div>
     <script>
-        let eventSource;
-        let remainingRequests = 0;
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
 
         document.getElementById('start-attack').addEventListener('click', () => {
             const url = document.getElementById('target-url').value;
             const output = document.getElementById('output');
+            output.textContent = '';
+
+            if (!isValidUrl(url)) {
+                output.textContent = 'Invalid URL. Please enter a valid URL.\n';
+                return;
+            }
+
             output.textContent = 'Starting attack...\n';
 
-            remainingRequests = 5000; // Set the limit of requests
-
-            eventSource = new EventSource(`/start-attack?url=${encodeURIComponent(url)}`);
+            const eventSource = new EventSource(`/start-attack?url=${encodeURIComponent(url)}`);
 
             eventSource.onmessage = function(event) {
                 output.textContent += event.data + '\n';
-                output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
-
-                if (event.data.includes('BOOM BAGSAK ANG GAGO HAHAHA 🤣🤣')) {
-                    eventSource.close();
-                }
-
-                remainingRequests--;
-                if (remainingRequests <= 0) {
-                    eventSource.close();
-                    output.textContent += 'Max requests reached.\n';
-                    output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
-                }
             };
 
             eventSource.onerror = function() {
                 eventSource.close();
                 output.textContent += 'Attack finished.\n';
-                output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
             };
-        });
-
-        document.getElementById('stop-attack').addEventListener('click', () => {
-            if (eventSource) {
-                eventSource.close();
-            }
-            fetch('/stop-attack')
-                .then(response => response.json())
-                .then(data => {
-                    const output = document.getElementById('output');
-                    output.textContent += data.message + '\n';
-                    output.scrollTop = output.scrollHeight; // Auto-scroll to bottom
-                });
         });
     </script>
 </body>
